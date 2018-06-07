@@ -1,0 +1,47 @@
+# TO GET UPDATED PROMPT WITH THE CURRENT GIT BRANCH, PLACE THE FOLLOWING LINES INTO YOUR ~/.bashrc
+
+# PLEASE NOTE THAT THE ttyrun COMMAND IS NOT INCLUDED AND NEEDS TO BE ADDED MANUALLY TO UPDATE ALL TTYS
+# http://www.humbug.in/2010/utility-to-send-commands-or-data-to-other-terminals-ttypts/
+
+_update_prompt() {
+  _def_prompt='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\] \[\033[01;34m\]\w \$\[\033[00m\] '
+  _git_prompt='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\] \[\033[01;34m\]\w \033[0;36m[$BRANCH] \033[01;34m\$\[\033[00m\] '
+
+  BRANCH=$(git rev-parse --abbrev-ref HEAD 2> /dev/null)
+
+  if [[ $BRANCH != "" ]]; then 
+    PS1=$_git_prompt;
+  else 
+    PS1=$_def_prompt;
+  fi; 
+}
+
+_update_ttys () {
+  command -v ttyrun > /dev/null 2>&1 || { return; }
+
+  FILES=$(ls /dev/pts/ | wc -l);
+  ITEMS=$((FILES -2));
+  CURRENT_TTY=$(tty)
+
+  for i in `seq 0 $ITEMS`;
+  do
+    if [[ $CURRENT_TTY != "/dev/pts/$i" ]]; then 
+      /usr/local/bin/ttyrun -n /dev/pts/$i _update_prompt
+    fi; 
+  done
+}
+
+git () {
+  if [[ $1 == "checkout" || $1 == "co" || $1 == "status" ]]; then 
+    command git "$@";
+    _update_prompt;
+    _update_ttys;
+  else 
+    command git "$@";
+  fi; 
+}
+
+cd () {
+  builtin cd "$@";
+  _update_prompt;
+}
